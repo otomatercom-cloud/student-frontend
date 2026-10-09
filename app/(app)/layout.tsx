@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { LayoutDashboard, Users, Layers, BookOpen, CalendarCheck, ClipboardList, MessageCircle, Wallet, LogOut, Menu, GraduationCap, UserPlus } from 'lucide-react';
+import { LayoutDashboard, Users, Layers, BookOpen, CalendarCheck, CalendarDays, Clock, ClipboardList, MessageCircle, Wallet, LogOut, Menu, GraduationCap, UserPlus } from 'lucide-react';
 import { useApi } from '@/lib/api';
 import { cx } from '@/components/ui';
 
@@ -13,6 +13,8 @@ const NAV = [
   { href: '/courses', label: 'Courses', icon: BookOpen },
   { href: '/fees', label: 'Fees', icon: Wallet },
   { href: '/attendance', label: 'Attendance', icon: CalendarCheck },
+  { href: '/timetable', label: 'Timetable', icon: Clock },
+  { href: '/holidays', label: 'Holidays', icon: CalendarDays },
   { href: '/marks', label: 'Marks', icon: ClipboardList },
   { href: '/whatsapp', label: 'WhatsApp Log', icon: MessageCircle },
 ];
@@ -29,7 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   const nav = (
     <nav className="flex-1 space-y-1 px-3">
-      {NAV.map(({ href, label, icon: Icon }) => {
+      {NAV.filter((n) => (n.href !== '/fees' || me?.can_finance) && (!['/attendance', '/holidays', '/whatsapp', '/timetable'].includes(n.href) || me?.can_attendance) && (n.href !== '/timetable' || me?.has_timetable)).map(({ href, label, icon: Icon }) => {
         const active = path === href || path.startsWith(href + '/');
         return (
           <Link key={href} href={href} onClick={() => setOpen(false)}

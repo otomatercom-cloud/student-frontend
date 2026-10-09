@@ -58,7 +58,7 @@ function AbsentPanel({ rows, date }: { rows: any[]; date: string }) {
 export default function Dashboard() {
   const { data: me } = useApi<any>('me');
   const { data, loading, error } = useApi<any>('dashboard');
-  const { data: fin } = useApi<any>('finance/summary');
+  const { data: fin } = useApi<any>(me?.can_finance ? 'finance/summary' : null);
   if (loading) return <Spinner />;
   if (error) return <ErrorBox text={error} />;
   const d = data!;
@@ -79,7 +79,7 @@ export default function Dashboard() {
         <Stat label="Courses" value={d.courses} icon={<BookOpen size={22} />} tone="amber" />
         <Stat label="Exams" value={d.exams} icon={<ClipboardList size={22} />} />
         <Stat label="Attendance today" value={d.attendance_today} icon={<CalendarCheck size={22} />} tone="blue" />
-        <Stat label="Draft attendance" value={d.draft_attendance} icon={<FileEdit size={22} />} tone="amber" />
+        <Stat label="Pending today" value={d.draft_attendance} icon={<FileEdit size={22} />} tone="amber" />
         <Stat label="Messages sent" value={d.wa_sent} icon={<Send size={22} />} />
         <Stat label="Messages failed" value={d.wa_failed} icon={<AlertTriangle size={22} />} tone="red" />
       </div>

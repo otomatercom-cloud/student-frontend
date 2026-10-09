@@ -15,6 +15,7 @@ export default function StudentPage({ params }: { params: { id: string } }) {
   const toast = useToast();
   const [tab, setTab] = useState(0);
   const { data: meta } = useApi<any>('meta');
+  const { data: me } = useApi<any>('me');
   const { data: s, loading, error, reload } = useApi<any>('students/' + params.id);
   const { data: ov, reload: reloadOv } = useApi<any>(tab >= 2 && tab !== 4 ? `students/${params.id}/overview` : null);
   const { data: fin, reload: reloadFin } = useApi<any>(tab === 4 ? `students/${params.id}/finance` : null);
@@ -36,7 +37,7 @@ export default function StudentPage({ params }: { params: { id: string } }) {
       <PageHeader title={s.name} subtitle={`Reg: ${s.registration_no || '-'} · Overall attendance ${s.overall_attendance}%`}
         actions={<>{s.batch && <Badge tone="blue">{s.batch.name}</Badge>}{s.batch && <Button variant="ghost" onClick={() => setTr({ to_batch_id: '', transfer_date: new Date().toISOString().slice(0, 10), reason: '' })}><ArrowRightLeft size={15} /> Transfer batch</Button>}</>} />
       <div className="mb-5 flex gap-1 overflow-x-auto rounded-xl bg-white p-1 shadow-card">
-        {TABS.map((t, i) => <button key={t} onClick={() => setTab(i)} className={cx('whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition', tab === i ? 'bg-brand-700 text-white' : 'text-slate-600 hover:bg-slate-100')}>{t}</button>)}
+        {TABS.map((t, i) => (i === 1 && me && !me.can_finance) ? null : <button key={t} onClick={() => setTab(i)} className={cx('whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold transition', tab === i ? 'bg-brand-700 text-white' : 'text-slate-600 hover:bg-slate-100')}>{t}</button>)}
       </div>
 
       {tab === 0 && <StudentForm meta={meta} initial={s} onSaved={() => { reload(); }} />}
