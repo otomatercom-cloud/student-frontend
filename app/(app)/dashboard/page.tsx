@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
-import { Wallet, Users, Layers, BookOpen, CalendarCheck, ClipboardList, Send, AlertTriangle, FileEdit, UserX, Sun, Sunset, Moon } from 'lucide-react';
+import { Wallet, Users, Layers, BookOpen, CalendarCheck, ClipboardList, Send, AlertTriangle, FileEdit, UserX, Sun, Sunset, Moon, Clock } from 'lucide-react';
 import { useApi } from '@/lib/api';
 import { Card, PageHeader, Spinner, Stat, ErrorBox } from '@/components/ui';
 
@@ -84,6 +84,20 @@ export default function Dashboard() {
         <Stat label="Messages failed" value={d.wa_failed} icon={<AlertTriangle size={22} />} tone="red" />
       </div>
       {fin && <div className="mt-4 grid gap-4 sm:grid-cols-3"><Stat label="Fees collected" value={'₹' + Number(fin.collected).toLocaleString('en-IN')} icon={<Wallet size={22} />} /><Stat label="Outstanding" value={'₹' + Number(fin.due).toLocaleString('en-IN')} icon={<AlertTriangle size={22} />} tone="red" /><Stat label="Partial / unpaid" value={`${fin.partial} / ${fin.unpaid}`} icon={<FileEdit size={22} />} tone="amber" /></div>}
+      {d.timetable_today && (
+        <Card className="mt-6 overflow-hidden p-0">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3"><div className="flex items-center gap-2 font-bold text-slate-800"><Clock size={18} className="text-brand-600" /> Today's timetable</div>
+            <Link href="/timetable" className="text-xs font-semibold text-brand-700 hover:underline">Open timetable</Link></div>
+          {!d.timetable_today.length ? <div className="p-6 text-center text-sm text-slate-400">No classes scheduled today</div> : (
+            <div className="divide-y divide-slate-100">{d.timetable_today.map((t: any) => (
+              <Link key={t.id} href="/attendance" className="flex flex-wrap items-center gap-x-5 gap-y-1 px-5 py-3 transition hover:bg-slate-50">
+                <span className="w-28 font-mono text-sm font-semibold text-brand-700">{t.time}</span>
+                <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-slate-900">{t.subject.name}</span>
+                  <span className="block truncate text-xs text-slate-500">{[t.batch.name, t.faculty?.name].filter(Boolean).join(' · ')}</span></span>
+                {t.classroom && <span className="rounded-full bg-sky-100 px-2.5 py-0.5 text-xs font-semibold text-sky-800">{t.classroom.name}</span>}
+                <span className={'rounded-full px-2.5 py-0.5 text-xs font-semibold ' + (t.state === 'locked' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800')}>{t.state === 'locked' ? 'Submitted' : 'Pending'}</span>
+              </Link>))}</div>)}
+        </Card>)}
       <h2 className="mb-3 mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">Quick actions</h2>
       <div className="grid gap-4 sm:grid-cols-2">
         {quick.map((q) => (

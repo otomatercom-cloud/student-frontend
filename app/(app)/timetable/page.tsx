@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import { Plus, Trash2, DoorOpen } from 'lucide-react';
+import { Plus, Trash2, DoorOpen, ChevronLeft, ChevronRight } from 'lucide-react';
 import { api, useApi } from '@/lib/api';
 import { Badge, Button, Card, Empty, ErrorBox, Field, Input, Modal, PageHeader, Select, Spinner, useToast } from '@/components/ui';
 
@@ -13,8 +13,17 @@ export default function Timetable() {
   const { data: meta, error: merr, reload: reloadMeta } = useApi<any>('timetable/meta');
   const [by, setBy] = useState<'batch' | 'faculty' | 'classroom'>('batch');
   const [sel, setSel] = useState('');
-  const q = sel ? `timetable?${by}_id=${sel}` : 'timetable';
-  const { data: slots, loading, error, reload } = useApi<any[]>(meta ? q : null);
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const [mode, setMode] = useState<'day' | 'week'>('day');
+  const [date, setDate] = useState(todayStr);
+  const filt = sel ? `${by}_id=${sel}` : '';
+  const { data: wk, loading: wl, error: werr, reload: reloadWk } = useApi<any[]>(meta && mode === 'week' ? `timetable?${filt}` : null);
+  const { data: dy, loading: dl, error: derr, reload: reloadDy } = useApi<any>(meta && mode === 'day' ? `timetable/day?date=${date}&${filt}` : null);
+  const slots = mode === 'week' ? wk : dy?.slots;
+  const loading = mode === 'week' ? wl : dl; const error = mode === 'week' ? werr : derr;
+  const reload = () => { reloadWk(); reloadDy(); };
+  const shift = (n: number) => { const d = new Date(date + 'T00:00:00'); d.setDate(d.getDate() + n); setDate(d.toISOString().slice(0, 10)); };
+  const dayName = (ds: string) => new Date(ds + 'T00:00:00').toLocaleDateString('en-IN', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
   const [edit, setEdit] = useState<any>(null);
   const [room, setRoom] = useState<any>(null);
   const [busy, setBusy] = useState(false);
@@ -48,7 +57,16 @@ export default function Timetable() {
   return (
     <>
       <PageHeader title="Timetable" subtitle="Weekly classes by batch, subject, faculty and classroom"
-        actions={canEdit ? <><Button variant="ghost" onClick={() => setRoom({ name: '', capacity: '' })}><DoorOpen size={16} /> Classrooms</Button><Button onClick={() => setEdit({ ...BLANK })}><Plus size={16} /> Add period</Button></> : undefined} />
+        actions={canEdit ? <>{meta.is_manager && <Button variant="ghost" onClick={() => setRoom({ name: '', capacity: '' })}><DoorOpen size={16} /> Classrooms</Button>}<Button onClick={() => setEdit({ ...BLANK, weekday: String((new Date(date + 'T00:00:00').getDay() + 6) % 7), batch_id: sel && by === 'batch' ? sel : '' })}><Plus size={16} /> Add period</Button></> : undefined} />
+      <Card className="mb-3 flex flex-wrap items-center gap-3 p-4">
+        <div className="flex rounded-xl bg-slate-100 p-1">{(['day', 'week'] as const).map((m) => (
+          <button key={m} onClick={() => setMode(m)} className={'rounded-lg px-4 py-1.5 text-sm font-semibold transition ' + (mode === m ? 'bg-white text-brand-800 shadow-sm' : 'text-slate-500')}>{m === 'day' ? 'By date' : 'Weekly'}</button>))}</div>
+        {mode === 'day' && <div className="flex items-center gap-1.5">
+          <button onClick={() => shift(-1)} className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50"><ChevronLeft size={16} /></button>
+          <Input type="date" value={date} onChange={(e) => e.target.value && setDate(e.target.value)} className="w-44" />
+          <button onClick={() => shift(1)} className="rounded-lg border border-slate-200 p-2 hover:bg-slate-50"><ChevronRight size={16} /></button>
+          {date !== todayStr && <Button variant="soft" onClick={() => setDate(todayStr)}>Today</Button>}</div>}
+      </Card>
       <Card className="mb-5 grid gap-3 p-4 md:grid-cols-[12rem_1fr]">
         <Select value={by} onChange={(e) => { setBy(e.target.value as any); setSel(''); }}>
           <option value="batch">View by batch</option><option value="faculty">View by faculty</option><option value="classroom">View by classroom</option></Select>
@@ -56,7 +74,17 @@ export default function Timetable() {
           {list.map((x: any) => <option key={x.id} value={x.id}>{x.name}</option>)}</Select>
       </Card>
       {error && <ErrorBox text={error} />}
-      {loading || !slots ? <Spinner /> : !slots.length ? <Card><Empty text="No periods yet" /></Card> : (
+      {mode === 'day' && <div className="mb-3 text-sm font-semibold text-slate-700">{dayName(date)}{dy?.off?.map((o: any) => <Badge key={o.batch} tone="slate"> {o.batch}: {o.reason} </Badge>)}</div>}
+      {loading || !slots ? <Spinner /> : mode === 'day' ? (
+        !slots.length ? <Card><Empty text="No classes on this date" /></Card> : (
+          <Card className="divide-y divide-slate-100 overflow-hidden">{slots.map((s: any) => (
+            <button key={s.id} disabled={!canEdit} onClick={() => openEdit(s)} className="flex w-full flex-wrap items-center gap-x-6 gap-y-1 px-5 py-3.5 text-left transition enabled:hover:bg-slate-50">
+              <span className="w-28 font-mono text-sm font-semibold text-brand-700">{s.time}</span>
+              <span className="min-w-0 flex-1"><span className="block truncate font-semibold text-slate-900">{s.subject.name}</span>
+                <span className="block truncate text-xs text-slate-500">{[s.batch.name, s.faculty?.name].filter(Boolean).join(' · ')}</span></span>
+              {s.classroom && <Badge tone="blue">{s.classroom.name}</Badge>}
+            </button>))}</Card>)
+      ) : !slots.length ? <Card><Empty text="No periods yet" /></Card> : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{days.map((d: any) => {
           const items = slots.filter((s) => s.weekday === d.value);
           return (
